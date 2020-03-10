@@ -1,7 +1,7 @@
 /*
  * Quick Hamsi-512 for X13 by tsiv - 2014
  * + Hamsi-512 80 by tpruvot - 2018
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  */
 
 #include <stdio.h>

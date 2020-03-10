@@ -2,7 +2,7 @@
  * SM 2.x SIMD512 CUDA Implementation without shuffle
  *
  * cbuchner 2014 / tpruvot 2018
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  */
 
 #include "cuda_helper.h"

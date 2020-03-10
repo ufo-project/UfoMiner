@@ -9,7 +9,7 @@
  * ==========================(LICENSE BEGIN)============================
  *
  * Copyright (c) 2014-2018 phm, tpruvot
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
