@@ -3,7 +3,7 @@
  * based on the work of https://github.com/ircubic/lib_gpu
  *
  * tpruvot 06-2018
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  */
 
 #ifdef _WIN32
@@ -12,7 +12,7 @@
 #include <memory>
 #include <stdexcept>
 
-#include "compat/nvapi/nvapi_RavenMiner.h"
+#include "compat/nvapi/nvapi_UfoMiner.h"
 
 class NvAPILibraryHandle
 {

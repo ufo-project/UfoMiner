@@ -2,7 +2,7 @@
  * Made to benchmark and test algo switch
  *
  * 2018 - tpruvot@github
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  */
 
 #include <unistd.h>

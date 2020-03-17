@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2009-2018 Petri Lehtinen <petri@digip.org>
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  *
  * Jansson is free software; you can redistribute it and/or modify
  * it under the terms of the MIT license. See LICENSE for details.

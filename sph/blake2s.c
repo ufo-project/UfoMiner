@@ -2,7 +2,7 @@
  * BLAKE2 reference source code package - reference C implementations
  *
  * Written in 2011 by Samuel Neves <sneves@dei.uc.pt>
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  *
  * To the extent possible under law, the author(s) have dedicated all copyright
  * and related and neighboring rights to this software to the public domain

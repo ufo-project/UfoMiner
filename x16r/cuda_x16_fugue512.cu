@@ -10,7 +10,7 @@
  * ==========================(LICENSE BEGIN)============================
  *
  * Copyright (c) 2018 tpruvot
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -335,9 +335,14 @@ void x16_fugue512_gpu_hash_80(const uint32_t threads, const uint32_t startNonce,
 	{
 		uint32_t Data[20];
 
-		#pragma unroll
+		#pragma unroll 10
 		for(int i = 0; i < 10; i++)
 			AS_UINT2(&Data[i * 2]) = AS_UINT2(&c_PaddedMessage80[i]);
+
+		#pragma unroll 20
+		for (int i = 0; i < 20; i++)
+			Data[i] = cuda_swab32(Data[i]);
+
 		Data[19] = (startNonce + thread);
 
 		uint32_t S00, S01, S02, S03, S04, S05, S06, S07, S08, S09, S10, S11;

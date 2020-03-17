@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include <RavenMiner-config.h>
+#include <UfoMiner-config.h>
 
 #include <stdbool.h>
 #include <inttypes.h>
@@ -274,11 +274,13 @@ void sha256d(unsigned char *hash, const unsigned char *data, int len);
 struct work;
 
 extern int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
+extern int scanhash_x17r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done);
 
 /* free device allocated memory per algo */
 void algo_free_all(int thr_id);
 
 extern void free_x16r(int thr_id);
+extern void free_x17r(int thr_id);
 
 /* api related */
 void *api_thread(void *userdata);
@@ -536,6 +538,7 @@ void bench_display_results();
 struct stratum_job {
 	char *job_id;
 	unsigned char prevhash[32];
+	unsigned char input[32];
 	size_t coinbase_size;
 	unsigned char *coinbase;
 	unsigned char *xnonce2;
@@ -577,6 +580,8 @@ struct stratum_ctx {
 	time_t tm_connected;
 
 	int srvtime_diff;
+
+	bool notify_init;
 };
 
 #define POK_MAX_TXS   4
@@ -754,6 +759,8 @@ void applog_compare_hash(void *hash, void *hash_ref);
 
 void print_hash_tests(void);
 void x16r_hash(void *output, const void *input);
+
+void x17rhash(void *output, const void *input);
 
 #ifdef __cplusplus
 }

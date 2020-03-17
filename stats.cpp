@@ -4,7 +4,7 @@
  * Note: this source is C++ (requires std::map)
  *
  * tpruvot@github 2018
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  */
 #include <stdlib.h>
 #include <memory.h>

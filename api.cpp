@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  *
  * Implementation by tpruvot (based on cgminer)
  *
@@ -944,7 +944,7 @@ static void mcast()
 	bool addrok;
 	char group;
 
-	char expect[] = "RavenMiner-"; // first 8 bytes constant
+	char expect[] = "UfoMiner-"; // first 8 bytes constant
 	char *expect_code;
 	size_t expect_code_len;
 	char buf[1024];

@@ -5,7 +5,7 @@
  * (to be merged later with stats)
  *
  * tpruvot@github 2014 - 2018
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  */
 #include <stdlib.h>
 #include <memory.h>

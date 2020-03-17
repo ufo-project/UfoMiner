@@ -1,7 +1,7 @@
 /*
  * Copyright 2010 Jeff Garzik
  * Copyright 2012-2014 pooler
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -10,7 +10,7 @@
  */
 
 //#define _GNU_SOURCE
-#include <RavenMiner-config.h>
+#include <UfoMiner-config.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -141,7 +141,7 @@ void applog(int prio, const char *fmt, ...)
 			use_colors ? CL_N : ""
 		);
 		if (prio == LOG_RAW) {
-			// no time prefix, for RavenMiner -n
+			// no time prefix, for UfoMiner -n
 			sprintf(f, "%s%s\n", fmt, CL_N);
 		}
 		pthread_mutex_lock(&applog_lock);
@@ -191,13 +191,13 @@ void get_defconfig_path(char *out, size_t bufsize, char *argv0)
 	const char *sep = strstr(dir, "\\") ? "\\" : "/";
 	struct stat info;
 #ifdef WIN32
-	snprintf(out, bufsize, "%s\\RavenMiner\\RavenMiner.conf\0", getenv("APPDATA"));
+	snprintf(out, bufsize, "%s\\UfoMiner\\UfoMiner.conf\0", getenv("APPDATA"));
 #else
-	snprintf(out, bufsize, "%s\\.RavenMiner\\RavenMiner.conf", getenv("HOME"));
+	snprintf(out, bufsize, "%s\\.UfoMiner\\UfoMiner.conf", getenv("HOME"));
 #endif
 	if (dir && stat(out, &info) != 0) {
 		// binary folder if not present in user folder
-		snprintf(out, bufsize, "%s%sRavenMiner.conf%s", dir, sep, "");
+		snprintf(out, bufsize, "%s%sUfoMiner.conf%s", dir, sep, "");
 	}
 	if (stat(out, &info) != 0) {
 		out[0] = '\0';
@@ -1162,50 +1162,193 @@ static const char *get_stratum_session_id(json_t *val)
 	return NULL;
 }
 
+//static bool stratum_parse_extranonce(struct stratum_ctx *sctx, json_t *params, int pndx)
+//{
+//	const char* xnonce1;
+//	int xn2_size;
+//
+//	xnonce1 = json_string_value(json_array_get(params, pndx));
+//	if (!xnonce1) {
+//		applog(LOG_ERR, "Failed to get extranonce1");
+//		goto out;
+//	}
+//	xn2_size = (int) json_integer_value(json_array_get(params, pndx+1));
+//	if (!xn2_size) {
+//		char algo[64] = { 0 };
+//		get_currentalgo(algo, sizeof(algo));
+//		applog(LOG_ERR, "Failed to get extranonce2_size");
+//		goto out;
+//	}
+//	if (xn2_size < 2 || xn2_size > 16) {
+//		applog(LOG_ERR, "Failed to get valid n2size in parse_extranonce (%d)", xn2_size);
+//		goto out;
+//	}
+//skip_n2:
+//	pthread_mutex_lock(&stratum_work_lock);
+//	if (sctx->xnonce1)
+//		free(sctx->xnonce1);
+//	sctx->xnonce1_size = strlen(xnonce1) / 2;
+//	sctx->xnonce1 = (uchar*) calloc(1, sctx->xnonce1_size);
+//	if (unlikely(!sctx->xnonce1)) {
+//		applog(LOG_ERR, "Failed to alloc xnonce1");
+//		pthread_mutex_unlock(&stratum_work_lock);
+//		goto out;
+//	}
+//	hex2bin(sctx->xnonce1, xnonce1, sctx->xnonce1_size);
+//	sctx->xnonce2_size = xn2_size;
+//	pthread_mutex_unlock(&stratum_work_lock);
+//
+//	if (pndx == 0 && opt_debug) /* pool dynamic change */
+//		applog(LOG_DEBUG, "Stratum set nonce %s with extranonce2 size=%d",
+//			xnonce1, xn2_size);
+//
+//	return true;
+//out:
+//	return false;
+//}
+
 static bool stratum_parse_extranonce(struct stratum_ctx *sctx, json_t *params, int pndx)
 {
 	const char* xnonce1;
-	int xn2_size;
 
 	xnonce1 = json_string_value(json_array_get(params, pndx));
 	if (!xnonce1) {
 		applog(LOG_ERR, "Failed to get extranonce1");
 		goto out;
 	}
-	xn2_size = (int) json_integer_value(json_array_get(params, pndx+1));
-	if (!xn2_size) {
-		char algo[64] = { 0 };
-		get_currentalgo(algo, sizeof(algo));
-		applog(LOG_ERR, "Failed to get extranonce2_size");
+
+	// check xnonce1
+	uint32_t xnonce1_len = strlen(xnonce1);
+	if (xnonce1_len != 4 && xnonce1_len != 6 && xnonce1_len != 8) {
+		applog(LOG_ERR, "invalid enonce: %s", xnonce1);
 		goto out;
 	}
-	if (xn2_size < 2 || xn2_size > 16) {
-		applog(LOG_ERR, "Failed to get valid n2size in parse_extranonce (%d)", xn2_size);
-		goto out;
+
+	for (int i = 0; i < xnonce1_len; ++i) {
+		char c = xnonce1[i];
+		if (c < '0' ||
+			(c > '9' && c < 'A') ||
+			(c > 'F' && c < 'a') ||
+			c > 'f')
+		{
+			applog(LOG_ERR, "invalid enonce: %s", xnonce1);
+			goto out;
+		}
 	}
-skip_n2:
+
 	pthread_mutex_lock(&stratum_work_lock);
 	if (sctx->xnonce1)
 		free(sctx->xnonce1);
 	sctx->xnonce1_size = strlen(xnonce1) / 2;
-	sctx->xnonce1 = (uchar*) calloc(1, sctx->xnonce1_size);
+	sctx->xnonce1 = (uchar*)calloc(1, sctx->xnonce1_size);
 	if (unlikely(!sctx->xnonce1)) {
 		applog(LOG_ERR, "Failed to alloc xnonce1");
 		pthread_mutex_unlock(&stratum_work_lock);
 		goto out;
 	}
 	hex2bin(sctx->xnonce1, xnonce1, sctx->xnonce1_size);
-	sctx->xnonce2_size = xn2_size;
 	pthread_mutex_unlock(&stratum_work_lock);
 
 	if (pndx == 0 && opt_debug) /* pool dynamic change */
-		applog(LOG_DEBUG, "Stratum set nonce %s with extranonce2 size=%d",
-			xnonce1, xn2_size);
+		applog(LOG_DEBUG, "Stratum set enonce %s, size %d",
+		xnonce1, sctx->xnonce1_size);
 
 	return true;
 out:
 	return false;
 }
+
+
+//bool stratum_subscribe(struct stratum_ctx *sctx)
+//{
+//	char *s, *sret = NULL;
+//	const char *sid;
+//	json_t *val = NULL, *res_val, *err_val;
+//	json_error_t err;
+//	bool ret = false, retry = false;
+//
+//start:
+//	s = (char*)malloc(128 + (sctx->session_id ? strlen(sctx->session_id) : 0));
+//	if (retry)
+//		sprintf(s, "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": []}");
+//	else if (sctx->session_id)
+//		sprintf(s, "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": [\"" USER_AGENT "\", \"%s\"]}", sctx->session_id);
+//	else
+//		sprintf(s, "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": [\"" USER_AGENT "\"]}");
+//
+//	if (!stratum_send_line(sctx, s))
+//		goto out;
+//
+//	if (!socket_full(sctx->sock, 10)) {
+//		applog(LOG_ERR, "stratum_subscribe timed out");
+//		goto out;
+//	}
+//
+//	sret = stratum_recv_line(sctx);
+//	if (!sret)
+//		goto out;
+//
+//	val = JSON_LOADS(sret, &err);
+//	free(sret);
+//	if (!val) {
+//		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
+//		goto out;
+//	}
+//
+//	if (json_integer_value(json_object_get(val, "id")) != 1) {
+//		applog(LOG_WARNING, "Stratum subscribe answer id is not correct!");
+//	}
+//
+//	res_val = json_object_get(val, "result");
+//	err_val = json_object_get(val, "error");
+//
+//	if (!res_val || json_is_null(res_val) ||
+//	    (err_val && !json_is_null(err_val))) {
+//		if (opt_debug || retry) {
+//			free(s);
+//			if (err_val)
+//				s = json_dumps(err_val, JSON_INDENT(3));
+//			else
+//				s = strdup("(unknown reason)");
+//			applog(LOG_ERR, "JSON-RPC call failed: %s", s);
+//		}
+//		goto out;
+//	}
+//
+//	// sid is param 1, extranonce params are 2 and 3
+//	if (!stratum_parse_extranonce(sctx, res_val, 1)) {
+//		goto out;
+//	}
+//
+//	ret = true;
+//
+//	// session id (optional)
+//	sid = get_stratum_session_id(res_val);
+//	if (opt_debug && sid)
+//		applog(LOG_DEBUG, "Stratum session id: %s", sid);
+//
+//	pthread_mutex_lock(&stratum_work_lock);
+//	if (sctx->session_id)
+//		free(sctx->session_id);
+//	sctx->session_id = sid ? strdup(sid) : NULL;
+//	sctx->next_diff = 1.0;
+//	pthread_mutex_unlock(&stratum_work_lock);
+//
+//out:
+//	free(s);
+//	if (val)
+//		json_decref(val);
+//
+//	if (!ret) {
+//		if (sret && !retry) {
+//			retry = true;
+//			goto start;
+//		}
+//	}
+//
+//	return ret;
+//}
+
 
 bool stratum_subscribe(struct stratum_ctx *sctx)
 {
@@ -1215,14 +1358,9 @@ bool stratum_subscribe(struct stratum_ctx *sctx)
 	json_error_t err;
 	bool ret = false, retry = false;
 
-start:
 	s = (char*)malloc(128 + (sctx->session_id ? strlen(sctx->session_id) : 0));
-	if (retry)
-		sprintf(s, "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": []}");
-	else if (sctx->session_id)
-		sprintf(s, "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": [\"" USER_AGENT "\", \"%s\"]}", sctx->session_id);
-	else
-		sprintf(s, "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": [\"" USER_AGENT "\"]}");
+
+	sprintf(s, "{\"id\": 1, \"method\": \"mining.subscribe\", \"params\": []}");
 
 	if (!stratum_send_line(sctx, s))
 		goto out;
@@ -1251,7 +1389,7 @@ start:
 	err_val = json_object_get(val, "error");
 
 	if (!res_val || json_is_null(res_val) ||
-	    (err_val && !json_is_null(err_val))) {
+		(err_val && !json_is_null(err_val))) {
 		if (opt_debug || retry) {
 			free(s);
 			if (err_val)
@@ -1263,22 +1401,16 @@ start:
 		goto out;
 	}
 
-	// sid is param 1, extranonce params are 2 and 3
-	if (!stratum_parse_extranonce(sctx, res_val, 1)) {
+	// extranonce is param 1
+	if (!stratum_parse_extranonce(sctx, res_val, 0)) {
 		goto out;
 	}
-
 	ret = true;
-
-	// session id (optional)
-	sid = get_stratum_session_id(res_val);
-	if (opt_debug && sid)
-		applog(LOG_DEBUG, "Stratum session id: %s", sid);
 
 	pthread_mutex_lock(&stratum_work_lock);
 	if (sctx->session_id)
 		free(sctx->session_id);
-	sctx->session_id = sid ? strdup(sid) : NULL;
+	sctx->session_id = NULL;
 	sctx->next_diff = 1.0;
 	pthread_mutex_unlock(&stratum_work_lock);
 
@@ -1287,17 +1419,104 @@ out:
 	if (val)
 		json_decref(val);
 
-	if (!ret) {
-		if (sret && !retry) {
-			retry = true;
-			goto start;
-		}
-	}
-
 	return ret;
 }
 
+
 extern bool opt_extranonce;
+
+//bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass)
+//{
+//	json_t *val = NULL, *res_val, *err_val;
+//	char *s, *sret;
+//	json_error_t err;
+//	bool ret = false;
+//
+//	s = (char*)malloc(80 + strlen(user) + strlen(pass));
+//	sprintf(s, "{\"id\": 2, \"method\": \"mining.authorize\", \"params\": [\"%s\", \"%s\"]}",
+//	        user, pass);
+//
+//	if (!stratum_send_line(sctx, s))
+//		goto out;
+//
+//	while (1) {
+//		sret = stratum_recv_line(sctx);
+//		if (!sret)
+//			goto out;
+//		if (!stratum_handle_method(sctx, sret))
+//			break;
+//		free(sret);
+//	}
+//
+//	val = JSON_LOADS(sret, &err);
+//	free(sret);
+//	if (!val) {
+//		applog(LOG_ERR, "JSON decode failed(%d): %s", err.line, err.text);
+//		goto out;
+//	}
+//
+//	if (json_integer_value(json_object_get(val, "id")) != 2) {
+//		applog(LOG_WARNING, "Stratum authorize answer id is not correct!");
+//	}
+//	res_val = json_object_get(val, "result");
+//	err_val = json_object_get(val, "error");
+//
+//	if (!res_val || json_is_false(res_val) ||
+//	    (err_val && !json_is_null(err_val)))  {
+//		if (err_val && json_is_array(err_val)) {
+//			const char* reason = json_string_value(json_array_get(err_val, 1));
+//			applog(LOG_ERR, "Stratum authentication failed (%s)", reason);
+//		}
+//		else applog(LOG_ERR, "Stratum authentication failed");
+//		goto out;
+//	}
+//
+//	sctx->tm_connected = time(NULL);
+//	ret = true;
+//
+//	if (!opt_extranonce)
+//		goto out;
+//
+//	// subscribe to extranonce (optional)
+//	sprintf(s, "{\"id\": 3, \"method\": \"mining.extranonce.subscribe\", \"params\": []}");
+//
+//	if (!stratum_send_line(sctx, s))
+//		goto out;
+//
+//	// reduced timeout to handle pools ignoring this method without answer (like xpool.ca)
+//	if (!socket_full(sctx->sock, 1)) {
+//		if (opt_debug)
+//			applog(LOG_DEBUG, "stratum extranonce subscribe timed out");
+//		goto out;
+//	}
+//
+//	sret = stratum_recv_line(sctx);
+//	if (sret) {
+//		json_t *extra = JSON_LOADS(sret, &err);
+//		if (!extra) {
+//			applog(LOG_WARNING, "JSON decode failed(%d): %s", err.line, err.text);
+//		} else {
+//			if (json_integer_value(json_object_get(extra, "id")) != 3) {
+//				// we receive a standard method if extranonce is ignored
+//				if (!stratum_handle_method(sctx, sret))
+//					applog(LOG_WARNING, "Stratum extranonce answer id was not correct!");
+//			} else {
+//				res_val = json_object_get(extra, "result");
+//				if (opt_debug && (!res_val || json_is_false(res_val)))
+//					applog(LOG_DEBUG, "extranonce subscribe not supported");
+//			}
+//			json_decref(extra);
+//		}
+//		free(sret);
+//	}
+//
+//out:
+//	free(s);
+//	if (val)
+//		json_decref(val);
+//
+//	return ret;
+//}
 
 bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *pass)
 {
@@ -1307,20 +1526,15 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	bool ret = false;
 
 	s = (char*)malloc(80 + strlen(user) + strlen(pass));
-	sprintf(s, "{\"id\": 2, \"method\": \"mining.authorize\", \"params\": [\"%s\", \"%s\"]}",
-	        user, pass);
+	sprintf(s, "{\"id\": 2, \"method\": \"mining.authorize\", \"params\": [\"%s\"]}",
+		user);
 
 	if (!stratum_send_line(sctx, s))
 		goto out;
 
-	while (1) {
-		sret = stratum_recv_line(sctx);
-		if (!sret)
-			goto out;
-		if (!stratum_handle_method(sctx, sret))
-			break;
-		free(sret);
-	}
+	sret = stratum_recv_line(sctx);
+	if (!sret)
+		goto out;
 
 	val = JSON_LOADS(sret, &err);
 	free(sret);
@@ -1336,7 +1550,7 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	err_val = json_object_get(val, "error");
 
 	if (!res_val || json_is_false(res_val) ||
-	    (err_val && !json_is_null(err_val)))  {
+		(err_val && !json_is_null(err_val)))  {
 		if (err_val && json_is_array(err_val)) {
 			const char* reason = json_string_value(json_array_get(err_val, 1));
 			applog(LOG_ERR, "Stratum authentication failed (%s)", reason);
@@ -1348,42 +1562,6 @@ bool stratum_authorize(struct stratum_ctx *sctx, const char *user, const char *p
 	sctx->tm_connected = time(NULL);
 	ret = true;
 
-	if (!opt_extranonce)
-		goto out;
-
-	// subscribe to extranonce (optional)
-	sprintf(s, "{\"id\": 3, \"method\": \"mining.extranonce.subscribe\", \"params\": []}");
-
-	if (!stratum_send_line(sctx, s))
-		goto out;
-
-	// reduced timeout to handle pools ignoring this method without answer (like xpool.ca)
-	if (!socket_full(sctx->sock, 1)) {
-		if (opt_debug)
-			applog(LOG_DEBUG, "stratum extranonce subscribe timed out");
-		goto out;
-	}
-
-	sret = stratum_recv_line(sctx);
-	if (sret) {
-		json_t *extra = JSON_LOADS(sret, &err);
-		if (!extra) {
-			applog(LOG_WARNING, "JSON decode failed(%d): %s", err.line, err.text);
-		} else {
-			if (json_integer_value(json_object_get(extra, "id")) != 3) {
-				// we receive a standard method if extranonce is ignored
-				if (!stratum_handle_method(sctx, sret))
-					applog(LOG_WARNING, "Stratum extranonce answer id was not correct!");
-			} else {
-				res_val = json_object_get(extra, "result");
-				if (opt_debug && (!res_val || json_is_false(res_val)))
-					applog(LOG_DEBUG, "extranonce subscribe not supported");
-			}
-			json_decref(extra);
-		}
-		free(sret);
-	}
-
 out:
 	free(s);
 	if (val)
@@ -1391,6 +1569,7 @@ out:
 
 	return ret;
 }
+
 
 /**
  * Extract bloc height     L H... here len=3, height=0x1333e8
@@ -1422,113 +1601,155 @@ static uint32_t getblocheight(struct stratum_ctx *sctx)
 	return height;
 }
 
+//static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
+//{
+//	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime;
+//	const char *claim = NULL, *nreward = NULL;
+//	size_t coinb1_size, coinb2_size;
+//	bool clean, ret = false;
+//	int merkle_count, i, p=0;
+//	json_t *merkle_arr;
+//	uchar **merkle = NULL;
+//	// uchar(*merkle_tree)[32] = { 0 };
+//	int ntime;
+//	char algo[64] = { 0 };
+//	get_currentalgo(algo, sizeof(algo));
+//	bool has_claim = !strcasecmp(algo, "lbry");
+//
+//	job_id = json_string_value(json_array_get(params, p++));
+//	prevhash = json_string_value(json_array_get(params, p++));
+//	if (has_claim) {
+//		claim = json_string_value(json_array_get(params, p++));
+//		if (!claim || strlen(claim) != 64) {
+//			applog(LOG_ERR, "Stratum notify: invalid claim parameter");
+//			goto out;
+//		}
+//	}
+//	coinb1 = json_string_value(json_array_get(params, p++));
+//	coinb2 = json_string_value(json_array_get(params, p++));
+//	merkle_arr = json_array_get(params, p++);
+//	if (!merkle_arr || !json_is_array(merkle_arr))
+//		goto out;
+//	merkle_count = (int) json_array_size(merkle_arr);
+//	version = json_string_value(json_array_get(params, p++));
+//	nbits = json_string_value(json_array_get(params, p++));
+//	stime = json_string_value(json_array_get(params, p++));
+//	clean = json_is_true(json_array_get(params, p)); p++;
+//	nreward = json_string_value(json_array_get(params, p++));
+//
+//	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !stime ||
+//	    strlen(prevhash) != 64 || strlen(version) != 8 ||
+//	    strlen(nbits) != 8 || strlen(stime) != 8) {
+//		applog(LOG_ERR, "Stratum notify: invalid parameters");
+//		goto out;
+//	}
+//
+//	/* store stratum server time diff */
+//	hex2bin((uchar *)&ntime, stime, 4);
+//	ntime = swab32(ntime) - (uint32_t) time(0);
+//	if (ntime > sctx->srvtime_diff) {
+//		sctx->srvtime_diff = ntime;
+//		if (opt_protocol && ntime > 20)
+//			applog(LOG_DEBUG, "stratum time is at least %ds in the future", ntime);
+//	}
+//
+//	if (merkle_count)
+//		merkle = (uchar**) malloc(merkle_count * sizeof(char *));
+//	for (i = 0; i < merkle_count; i++) {
+//		const char *s = json_string_value(json_array_get(merkle_arr, i));
+//		if (!s || strlen(s) != 64) {
+//			while (i--)
+//				free(merkle[i]);
+//			free(merkle);
+//			applog(LOG_ERR, "Stratum notify: invalid Merkle branch");
+//			goto out;
+//		}
+//		merkle[i] = (uchar*) malloc(32);
+//		hex2bin(merkle[i], s, 32);
+//	}
+//
+//	pthread_mutex_lock(&stratum_work_lock);
+//
+//	coinb1_size = strlen(coinb1) / 2;
+//	coinb2_size = strlen(coinb2) / 2;
+//	sctx->job.coinbase_size = coinb1_size + sctx->xnonce1_size +
+//	                          sctx->xnonce2_size + coinb2_size;
+//
+//	sctx->job.coinbase = (uchar*) realloc(sctx->job.coinbase, sctx->job.coinbase_size);
+//	sctx->job.xnonce2 = sctx->job.coinbase + coinb1_size + sctx->xnonce1_size;
+//	hex2bin(sctx->job.coinbase, coinb1, coinb1_size);
+//	memcpy(sctx->job.coinbase + coinb1_size, sctx->xnonce1, sctx->xnonce1_size);
+//
+//	if (!sctx->job.job_id || strcmp(sctx->job.job_id, job_id))
+//		memset(sctx->job.xnonce2, 0, sctx->xnonce2_size);
+//	hex2bin(sctx->job.xnonce2 + sctx->xnonce2_size, coinb2, coinb2_size);
+//
+//	free(sctx->job.job_id);
+//	sctx->job.job_id = strdup(job_id);
+//	hex2bin(sctx->job.prevhash, prevhash, 32);
+//	if (has_claim) hex2bin(sctx->job.claim, claim, 32);
+//
+//	sctx->job.height = getblocheight(sctx);
+//
+//	for (i = 0; i < sctx->job.merkle_count; i++)
+//		free(sctx->job.merkle[i]);
+//	free(sctx->job.merkle);
+//	sctx->job.merkle = merkle;
+//	sctx->job.merkle_count = merkle_count;
+//
+//	hex2bin(sctx->job.version, version, 4);
+//	hex2bin(sctx->job.nbits, nbits, 4);
+//	hex2bin(sctx->job.ntime, stime, 4);
+//	if(nreward != NULL)
+//	{
+//		if(strlen(nreward) == 4)
+//			hex2bin(sctx->job.nreward, nreward, 2);
+//	}
+//	sctx->job.clean = clean;
+//
+//	sctx->job.diff = sctx->next_diff;
+//
+//	pthread_mutex_unlock(&stratum_work_lock);
+//
+//	ret = true;
+//
+//out:
+//	return ret;
+//}
+
+
 static bool stratum_notify(struct stratum_ctx *sctx, json_t *params)
 {
-	const char *job_id, *prevhash, *coinb1, *coinb2, *version, *nbits, *stime;
-	const char *claim = NULL, *nreward = NULL;
-	size_t coinb1_size, coinb2_size;
-	bool clean, ret = false;
-	int merkle_count, i, p=0;
-	json_t *merkle_arr;
-	uchar **merkle = NULL;
-	// uchar(*merkle_tree)[32] = { 0 };
-	int ntime;
-	char algo[64] = { 0 };
-	get_currentalgo(algo, sizeof(algo));
-	bool has_claim = !strcasecmp(algo, "lbry");
+	const char *job_id, *prevhash, *input;
+
+	bool ret = false;
+	int  p = 0;
 
 	job_id = json_string_value(json_array_get(params, p++));
 	prevhash = json_string_value(json_array_get(params, p++));
-	if (has_claim) {
-		claim = json_string_value(json_array_get(params, p++));
-		if (!claim || strlen(claim) != 64) {
-			applog(LOG_ERR, "Stratum notify: invalid claim parameter");
-			goto out;
-		}
-	}
-	coinb1 = json_string_value(json_array_get(params, p++));
-	coinb2 = json_string_value(json_array_get(params, p++));
-	merkle_arr = json_array_get(params, p++);
-	if (!merkle_arr || !json_is_array(merkle_arr))
-		goto out;
-	merkle_count = (int) json_array_size(merkle_arr);
-	version = json_string_value(json_array_get(params, p++));
-	nbits = json_string_value(json_array_get(params, p++));
-	stime = json_string_value(json_array_get(params, p++));
-	clean = json_is_true(json_array_get(params, p)); p++;
-	nreward = json_string_value(json_array_get(params, p++));
+	input = json_string_value(json_array_get(params, p++));
 
-	if (!job_id || !prevhash || !coinb1 || !coinb2 || !version || !nbits || !stime ||
-	    strlen(prevhash) != 64 || strlen(version) != 8 ||
-	    strlen(nbits) != 8 || strlen(stime) != 8) {
+	if (!job_id || !prevhash || !input ||
+		strlen(prevhash) != 64 || strlen(input) != 64) {
 		applog(LOG_ERR, "Stratum notify: invalid parameters");
 		goto out;
 	}
 
-	/* store stratum server time diff */
-	hex2bin((uchar *)&ntime, stime, 4);
-	ntime = swab32(ntime) - (uint32_t) time(0);
-	if (ntime > sctx->srvtime_diff) {
-		sctx->srvtime_diff = ntime;
-		if (opt_protocol && ntime > 20)
-			applog(LOG_DEBUG, "stratum time is at least %ds in the future", ntime);
-	}
-
-	if (merkle_count)
-		merkle = (uchar**) malloc(merkle_count * sizeof(char *));
-	for (i = 0; i < merkle_count; i++) {
-		const char *s = json_string_value(json_array_get(merkle_arr, i));
-		if (!s || strlen(s) != 64) {
-			while (i--)
-				free(merkle[i]);
-			free(merkle);
-			applog(LOG_ERR, "Stratum notify: invalid Merkle branch");
-			goto out;
-		}
-		merkle[i] = (uchar*) malloc(32);
-		hex2bin(merkle[i], s, 32);
-	}
-
 	pthread_mutex_lock(&stratum_work_lock);
 
-	coinb1_size = strlen(coinb1) / 2;
-	coinb2_size = strlen(coinb2) / 2;
-	sctx->job.coinbase_size = coinb1_size + sctx->xnonce1_size +
-	                          sctx->xnonce2_size + coinb2_size;
-
-	sctx->job.coinbase = (uchar*) realloc(sctx->job.coinbase, sctx->job.coinbase_size);
-	sctx->job.xnonce2 = sctx->job.coinbase + coinb1_size + sctx->xnonce1_size;
-	hex2bin(sctx->job.coinbase, coinb1, coinb1_size);
-	memcpy(sctx->job.coinbase + coinb1_size, sctx->xnonce1, sctx->xnonce1_size);
-
-	if (!sctx->job.job_id || strcmp(sctx->job.job_id, job_id))
-		memset(sctx->job.xnonce2, 0, sctx->xnonce2_size);
-	hex2bin(sctx->job.xnonce2 + sctx->xnonce2_size, coinb2, coinb2_size);
-
+	sctx->notify_init = true;
 	free(sctx->job.job_id);
 	sctx->job.job_id = strdup(job_id);
 	hex2bin(sctx->job.prevhash, prevhash, 32);
-	if (has_claim) hex2bin(sctx->job.claim, claim, 32);
-
-	sctx->job.height = getblocheight(sctx);
-
-	for (i = 0; i < sctx->job.merkle_count; i++)
-		free(sctx->job.merkle[i]);
-	free(sctx->job.merkle);
-	sctx->job.merkle = merkle;
-	sctx->job.merkle_count = merkle_count;
-
-	hex2bin(sctx->job.version, version, 4);
-	hex2bin(sctx->job.nbits, nbits, 4);
-	hex2bin(sctx->job.ntime, stime, 4);
-	if(nreward != NULL)
-	{
-		if(strlen(nreward) == 4)
-			hex2bin(sctx->job.nreward, nreward, 2);
-	}
-	sctx->job.clean = clean;
+	hex2bin(sctx->job.input, input, 32);
 
 	sctx->job.diff = sctx->next_diff;
+
+	// enonce -> xnonce2
+	sctx->xnonce2_size = sctx->xnonce1_size;
+	free(sctx->job.xnonce2);
+	sctx->job.xnonce2 = (uchar*)calloc(1, sctx->xnonce2_size);
+	memcpy(sctx->job.xnonce2, sctx->xnonce1, sctx->xnonce2_size);
 
 	pthread_mutex_unlock(&stratum_work_lock);
 
@@ -1539,13 +1760,37 @@ out:
 }
 
 extern volatile time_t g_work_time;
+//static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
+//{
+//	double diff;
+//
+//	diff = json_number_value(json_array_get(params, 0));
+//	if (diff <= 0.0)
+//		return false;
+//
+//	pthread_mutex_lock(&stratum_work_lock);
+//	sctx->next_diff = diff;
+//	pthread_mutex_unlock(&stratum_work_lock);
+//
+//	return true;
+//}
+
+
 static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 {
 	double diff;
 
 	diff = json_number_value(json_array_get(params, 0));
-	if (diff <= 0.0)
-		return false;
+	if (diff <= 0.0) {
+		const char* diffStr = json_string_value(json_array_get(params, 0));
+		if (!diffStr)
+			return false;
+		else {
+			diff = atof(diffStr);
+			if (diff <= 0.0)
+				return false;
+		}
+	}
 
 	pthread_mutex_lock(&stratum_work_lock);
 	sctx->next_diff = diff;
@@ -1553,6 +1798,7 @@ static bool stratum_set_difficulty(struct stratum_ctx *sctx, json_t *params)
 
 	return true;
 }
+
 
 static bool stratum_reconnect(struct stratum_ctx *sctx, json_t *params)
 {
@@ -1846,13 +2092,13 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s)
 		ret = stratum_reconnect(sctx, params);
 		goto out;
 	}
-	if (!strcasecmp(method, "client.get_algo")) { // RavenMiner only yet!
+	if (!strcasecmp(method, "client.get_algo")) { // UfoMiner only yet!
 		// will prevent wrong algo parameters on a pool, will be used as test on rejects
 		if (!opt_quiet) applog(LOG_NOTICE, "Pool asked your algo parameter");
 		ret = stratum_get_algo(sctx, id, params);
 		goto out;
 	}
-	if (!strcasecmp(method, "client.get_stats")) { // RavenMiner/yiimp only yet!
+	if (!strcasecmp(method, "client.get_stats")) { // UfoMiner/yiimp only yet!
 		// optional to fill device benchmarks
 		ret = stratum_get_stats(sctx, id, params);
 		goto out;

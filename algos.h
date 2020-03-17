@@ -5,7 +5,7 @@
 #include "compat.h"
 
 enum sha_algos {
-	ALGO_X16R = 0,
+	ALGO_X17R = 0,
 	ALGO_AUTO,
 	ALGO_COUNT
 };
@@ -13,7 +13,7 @@ enum sha_algos {
 extern volatile enum sha_algos opt_algo;
 
 static const char *algo_names[] = {
-	"x16r",
+	"x17r",
 	"auto", /* reserved for multi algo */
 	""
 };

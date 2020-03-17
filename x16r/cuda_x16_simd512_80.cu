@@ -1,7 +1,7 @@
 /**
  * SIMD512 CUDA IMPLEMENTATION based on sph simd code
  * tpruvot 2018 (with the help of kernelx xevan code)
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  */
 
 #include <miner.h>

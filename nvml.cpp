@@ -564,7 +564,7 @@ uint32_t nvml_get_plimit(nvml_handle *nvmlh, int dev_id)
 	return plimit;
 }
 
-// RavenMiner -D -n
+// UfoMiner -D -n
 #define LSTDEV_PFX "        "
 void nvml_print_device_info(int dev_id)
 {
@@ -835,7 +835,7 @@ int nvml_destroy(nvml_handle *nvmlh)
  * nvml api doesn't exists as 32bit dll :///
  */
 #ifdef WIN32
-#include "nvapi/nvapi_RavenMiner.h"
+#include "nvapi/nvapi_UfoMiner.h"
 
 static unsigned int nvapi_dev_map[MAX_GPUS] = { 0 };
 static NvDisplayHandle hDisplay_a[NVAPI_MAX_PHYSICAL_GPUS * 2] = { 0 };

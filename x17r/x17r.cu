@@ -1,5 +1,5 @@
 /**
- * X16R algorithm (X16 with Randomized chain order)
+ * X17R algorithm (X17 with Randomized chain order)
  *
  * tpruvot 2018 - GPL code
  * Copyright (c) 2020 UfoCommunity team
@@ -28,11 +28,12 @@ extern "C" {
 #include "sph/sph_shabal.h"
 #include "sph/sph_whirlpool.h"
 #include "sph/sph_sha2.h"
+#include "sph/sph_haval.h"
 }
 
 #include "miner.h"
 #include "cuda_helper.h"
-#include "cuda_x16r.h"
+#include "cuda_x17r.h"
 
 static uint32_t *d_hash[MAX_GPUS];
 
@@ -53,6 +54,7 @@ enum Algo {
 	SHABAL,
 	WHIRLPOOL,
 	SHA512,
+	HAVAL,
 	HASH_FUNC_COUNT
 };
 
@@ -73,6 +75,7 @@ static const char* algo_strings[] = {
 	"shabal",
 	"whirlpool",
 	"sha512",
+	"haval256",
 	NULL
 };
 
@@ -86,8 +89,9 @@ static void getAlgoString(const uint32_t* prevblock, char *output)
 	uint8_t* data = (uint8_t*)prevblock;
 
 	for (uint8_t j = 0; j < HASH_FUNC_COUNT; j++) {
-		uint8_t b = (15 - j) >> 1; // 16 ascii hex chars, reversed
-		uint8_t algoDigit = (j & 1) ? data[b] & 0xF : data[b] >> 4;
+		//uint8_t b = (15 - j) >> 1; // 16 ascii hex chars, reversed
+		//uint8_t algoDigit = (j & 1) ? data[b] & 0xF : data[b] >> 4;
+		uint8_t algoDigit = data[j] % HASH_FUNC_COUNT;
 		if (algoDigit >= 10)
 			sprintf(sptr, "%c", 'A' + (algoDigit - 10));
 		else
@@ -97,8 +101,8 @@ static void getAlgoString(const uint32_t* prevblock, char *output)
 	*sptr = '\0';
 }
 
-// X16R CPU Hash (Validation)
-extern "C" void x16r_hash(void *output, const void *input)
+// X17R CPU Hash (Validation)
+extern "C" void x17r_hash(void *output, const void *input)
 {
 	unsigned char _ALIGN(64) hash[128];
 
@@ -118,14 +122,16 @@ extern "C" void x16r_hash(void *output, const void *input)
 	sph_shabal512_context ctx_shabal;
 	sph_whirlpool_context ctx_whirlpool;
 	sph_sha512_context ctx_sha512;
+	sph_haval256_5_context ctx_haval;
 
 	void *in = (void*) input;
 	int size = 80;
 
 	uint32_t *in32 = (uint32_t*) input;
 	getAlgoString(&in32[1], hashOrder);
-
-	for (int i = 0; i < 16; i++)
+	//applog(LOG_INFO, "hashOrder %s ", hashOrder);
+	memset(&hash, 0, 128);
+	for (int i = 0; i < 17; i++)
 	{
 		const char elem = hashOrder[i];
 		const uint8_t algo = elem >= 'A' ? elem - 'A' + 10 : elem - '0';
@@ -211,6 +217,12 @@ extern "C" void x16r_hash(void *output, const void *input)
 			sph_sha512(&ctx_sha512,(const void*) in, size);
 			sph_sha512_close(&ctx_sha512,(void*) hash);
 			break;
+		case HAVAL:
+			sph_haval256_5_init(&ctx_haval);
+			sph_haval256_5(&ctx_haval, (const void*)in, size);
+			sph_haval256_5_close(&ctx_haval, hash);
+			memset(hash + 32, 0x00000000, 32);
+			break;
 		}
 		in = (void*) hash;
 		size = 64;
@@ -218,27 +230,27 @@ extern "C" void x16r_hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
-void whirlpool_midstate(void *state, const void *input)
-{
-	sph_whirlpool_context ctx;
-
-	sph_whirlpool_init(&ctx);
-	sph_whirlpool(&ctx, input, 64);
-
-	memcpy(state, ctx.state, 64);
-}
+//void whirlpool_midstate(void *state, const void *input)
+//{
+//	sph_whirlpool_context ctx;
+//
+//	sph_whirlpool_init(&ctx);
+//	sph_whirlpool(&ctx, input, 64);
+//
+//	memcpy(state, ctx.state, 64);
+//}
 
 static bool init[MAX_GPUS] = { 0 };
 
 //#define _DEBUG
-#define _DEBUG_PREFIX "x16r-"
+#define _DEBUG_PREFIX "x17r-"
 #include "cuda_debug.cuh"
 
 //static int algo80_tests[HASH_FUNC_COUNT] = { 0 };
 //static int algo64_tests[HASH_FUNC_COUNT] = { 0 };
 static int algo80_fails[HASH_FUNC_COUNT] = { 0 };
 
-extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
+extern "C" int scanhash_x17r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done)
 {
 	uint32_t *pdata = work->data;
 	uint32_t *ptarget = work->target;
@@ -278,6 +290,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		x15_whirlpool_cpu_init(thr_id, throughput, 0);
 		x16_whirlpool512_init(thr_id, throughput);
 		x17_sha512_cpu_init(thr_id, throughput);
+		x17_haval256_cpu_init(thr_id, throughput);
 
 		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t) 64 * throughput), 0);
 
@@ -287,8 +300,8 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	}
 
 	if (opt_benchmark) {
-		((uint32_t*)ptarget)[7] = 0x003f;
-		((uint8_t*)pdata)[8] = 0x90; // hashOrder[0] = '9'; for simd 80 + blake512 64
+		//((uint32_t*)ptarget)[7] = 0x003f;
+		//((uint8_t*)pdata)[8] = 0x90; // hashOrder[0] = '9'; for simd 80 + blake512 64
 		//((uint8_t*)pdata)[8] = 0xA0; // hashOrder[0] = 'A'; for echo 80 + blake512 64
 		//((uint8_t*)pdata)[8] = 0xB0; // hashOrder[0] = 'B'; for hamsi 80 + blake512 64
 		//((uint8_t*)pdata)[8] = 0xC0; // hashOrder[0] = 'C'; for fugue 80 + blake512 64
@@ -296,12 +309,19 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	}
 	uint32_t _ALIGN(64) endiandata[20];
 
-	for (int k=0; k < 19; k++)
-		be32enc(&endiandata[k], pdata[k]);
+	for (int k=0; k < 20; k++)
+		endiandata[k] = pdata[k];
 
-	uint32_t ntime = swab32(pdata[17]);
+	//char endiandata_str[161];
+	//memset(endiandata_str, 0x0, sizeof(endiandata_str));
+	//for (int k = 0; k < 80; k++)
+	//	sprintf(endiandata_str + 2 * k, "%02x", ((uint8_t*)endiandata)[k]);
+	//printf("%s\n", endiandata_str);
+
+	uint32_t ntime = swab32(pdata[0]);
 	if (s_ntime != ntime) {
 		getAlgoString(&endiandata[1], hashOrder);
+		//applog(LOG_INFO, "hashOrder %s ", hashOrder);
 		s_ntime = ntime;
 		s_implemented = true;
 		if (opt_debug && !thr_id) applog(LOG_DEBUG, "hash order %s (%08x)", hashOrder, ntime);
@@ -365,6 +385,9 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 			break;
 		case SHA512:
 			x16_sha512_setBlock_80(endiandata);
+			break;
+		case HAVAL:
+			x17_haval256_setBlock_80(endiandata);
 			break;
 		default: {
 			if (!thr_id)
@@ -447,9 +470,13 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				x16_sha512_cuda_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]); order++;
 				TRACE("sha512 :");
 				break;
+			case HAVAL:
+				x17_haval256_cuda_hash_80(thr_id, throughput, pdata[19], d_hash[thr_id]); order++;
+				TRACE("haval :");
+				break;
 		}
 
-		for (int i = 1; i < 16; i++)
+		for (int i = 1; i < 17; i++)
 		{
 			const char elem = hashOrder[i];
 			const uint8_t algo64 = elem >= 'A' ? elem - 'A' + 10 : elem - '0';
@@ -519,6 +546,10 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				x17_sha512_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id]); order++;
 				TRACE("sha512 :");
 				break;
+			case HAVAL:
+				x17_haval256_cpu_hash_64(thr_id, throughput, pdata[19], d_hash[thr_id], 256); order++;
+				TRACE("haval256 :");
+				break;
 			}
 		}
 
@@ -528,24 +559,29 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 #ifdef _DEBUG
 		uint32_t _ALIGN(64) dhash[8];
 		be32enc(&endiandata[19], pdata[19]);
-		x16r_hash(dhash, endiandata);
+		x17r_hash(dhash, endiandata);
 		applog_hash(dhash);
 		return -1;
 #endif
 		if (work->nonces[0] != UINT32_MAX)
 		{
+			if (opt_benchmark) gpulog(LOG_BLUE, dev_id, "found");
+
 			const uint32_t Htarg = ptarget[7];
 			uint32_t _ALIGN(64) vhash[8];
 			be32enc(&endiandata[19], work->nonces[0]);
-			x16r_hash(vhash, endiandata);
+			x17r_hash(vhash, endiandata);
 
 			if (vhash[7] <= Htarg && fulltest(vhash, ptarget)) {
+				//if (!opt_quiet)	gpulog(LOG_INFO, thr_id, "result for %08x validate on CPU! %s %s",
+				//	work->nonces[0], algo_strings[algo80], hashOrder);
+
 				work->valid_nonces = 1;
 				work->nonces[1] = cuda_check_hash_suppl(thr_id, throughput, pdata[19], d_hash[thr_id], 1);
 				work_set_target_ratio(work, vhash);
 				if (work->nonces[1] != 0) {
 					be32enc(&endiandata[19], work->nonces[1]);
-					x16r_hash(vhash, endiandata);
+					x17r_hash(vhash, endiandata);
 					bn_set_target_ratio(work, vhash, 1);
 					work->valid_nonces++;
 					pdata[19] = max(work->nonces[0], work->nonces[1]) + 1;
@@ -582,9 +618,12 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 					pdata[19] = work->nonces[0] + 1;
 					continue;
 				} else {
-					if (!opt_quiet)	gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU! %s %s",
-						work->nonces[0], algo_strings[algo80], hashOrder);
+					//if (!opt_quiet)	{
+					//	gpulog(LOG_WARNING, thr_id, "result for %08x does not validate on CPU! %s %s",
+					//		work->nonces[0], algo_strings[algo80], hashOrder);
+					//}
 					warn = 0;
+					return 0;
 				}
 			}
 		}
@@ -603,7 +642,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 }
 
 // cleanup
-extern "C" void free_x16r(int thr_id)
+extern "C" void free_x17r(int thr_id)
 {
 	if (!init[thr_id])
 		return;

@@ -1,6 +1,6 @@
 /*
  * Copyright 2009 Colin Percival, 2018 savale
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

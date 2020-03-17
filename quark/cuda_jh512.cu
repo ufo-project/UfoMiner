@@ -2,7 +2,7 @@
  * JH512 64 and 80 kernels
  *
  * JH80 by tpruvot - 2018 - under GPLv3
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  **/
 #include <cuda_helper.h>
 

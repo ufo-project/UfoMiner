@@ -1,6 +1,6 @@
 /**
  * nvidia-settings command line interface for linux - tpruvot 2018
- * Copyright (c) 2018 RavenCommunity team
+ * Copyright (c) 2020 UfoCommunity team
  *
  * Notes: need X setup and running, with an opened X session.
  *        init speed could be improved, running multiple threads
