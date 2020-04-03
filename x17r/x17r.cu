@@ -256,10 +256,50 @@ extern "C" int scanhash_x17r(int thr_id, struct work* work, uint32_t max_nonce, 
 	uint32_t *ptarget = work->target;
 	const uint32_t first_nonce = pdata[19];
 	const int dev_id = device_map[thr_id];
-	int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 20 : 19;
-	if (strstr(device_name[dev_id], "GTX 1080")) intensity = 20;
-	uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
+	//int intensity = (device_sm[dev_id] > 500 && !is_windows()) ? 20 : 19;
+	//if (strstr(device_name[dev_id], "GTX 1080")) intensity = 20;
+	//uint32_t throughput = cuda_default_throughput(thr_id, 1U << intensity);
 	//if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
+
+	uint32_t default_throughput = 1 << 20;
+	if ((strstr(device_name[dev_id], "1050")))
+	{
+		default_throughput = 1 << 20;
+	}
+	else if ((strstr(device_name[dev_id], "950")))
+	{
+		default_throughput = 1 << 20;
+	}
+	else if ((strstr(device_name[dev_id], "960")))
+	{
+		default_throughput = 1 << 20;
+	}
+	else if ((strstr(device_name[dev_id], "750")))
+	{
+		default_throughput = 1 << 20;
+	}
+	else if ((strstr(device_name[dev_id], "1060")) || (strstr(device_name[dev_id], "P106")))
+	{
+		default_throughput = (1 << 21);
+	}
+	else if ((strstr(device_name[dev_id], "970") || (strstr(device_name[dev_id], "980"))))
+	{
+		default_throughput = (1 << 21);
+	}
+	else if ((strstr(device_name[dev_id], "166")) || (strstr(device_name[dev_id], "20")))
+	{
+		default_throughput = (1 << 21);
+	}
+	else if (strstr(device_name[dev_id], "1070") || (strstr(device_name[dev_id], "P104")))
+	{
+		default_throughput = (1 << 21);
+	}
+	else if ((strstr(device_name[dev_id], "1080 Ti")) || (strstr(device_name[dev_id], "1080")) || (strstr(device_name[dev_id], "P102")))
+	{
+		default_throughput = (1 << 21);
+	}
+	uint32_t throughput = cuda_default_throughput(thr_id, default_throughput);
+	if (init[thr_id]) throughput = min(throughput, max_nonce - first_nonce);
 
 	if (!init[thr_id])
 	{
