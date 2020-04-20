@@ -197,6 +197,7 @@ char *rpc_user = NULL;
 char *rpc_pass;
 char *rpc_url;
 char *short_url = NULL;
+char *default_user_name = "ufominer001";
 
 struct stratum_ctx stratum = { 0 };
 pthread_mutex_t stratum_sock_lock;
@@ -2522,6 +2523,7 @@ static void show_usage_and_exit(int status)
 void parse_arg(int key, char *arg)
 {
 	char *p = arg;
+	char *tmp = nullptr;
 	int v, i;
 	uint64_t ul;
 	double d;
@@ -2724,7 +2726,15 @@ void parse_arg(int key, char *arg)
 		break;
 	case 'u':
 		free(rpc_user);
-		rpc_user = strdup(arg);
+		p = strchr(arg, '.');
+		if (p)
+			rpc_user = strdup(arg);
+		else {
+			rpc_user = (char*)calloc(strlen(arg) + 1 + strlen(default_user_name) + 1, 1);
+			strcpy(rpc_user, arg);
+			strcat(rpc_user, ".");
+			strcat(rpc_user, default_user_name);
+		}
 		pool_set_creds(cur_pooln);
 		break;
 	case 'o':			/* --url */
@@ -2761,8 +2771,19 @@ void parse_arg(int key, char *arg)
 			sp = strchr(ap, ':');
 			if (sp && sp < p) {
 				free(rpc_user);
-				rpc_user = (char*)calloc(sp - ap + 1, 1);
-				strncpy(rpc_user, ap, sp - ap);
+				free(tmp);
+				tmp = (char*)calloc(sp - ap + 1, 1);
+				strncpy(tmp, ap, sp - ap);
+				p = strchr(tmp, '.');
+				if (p)
+					rpc_user = strdup(tmp);
+				else {
+					rpc_user = (char*)calloc(sp - ap + 1 + strlen(default_user_name) + 1, 1);
+					strncpy(rpc_user, ap, sp - ap);
+					strcat(rpc_user, ".");
+					strcat(rpc_user, default_user_name);
+				}
+				free(tmp);
 				free(rpc_pass);
 				rpc_pass = strdup(sp + 1);
 			} else {
@@ -2782,8 +2803,19 @@ void parse_arg(int key, char *arg)
 		if (!p)
 			show_usage_and_exit(1);
 		free(rpc_user);
-		rpc_user = (char*)calloc(p - arg + 1, 1);
-		strncpy(rpc_user, arg, p - arg);
+		free(tmp);
+		tmp = (char*)calloc(p - arg + 1, 1);
+		strncpy(tmp, arg, p - arg);
+		p = strchr(tmp, '.');
+		if (p)
+			rpc_user = strdup(tmp);
+		else {
+			rpc_user = (char*)calloc(p - arg + 1 + strlen(default_user_name) + 1, 1);
+			strncpy(rpc_user, arg, p - arg);
+			strcat(rpc_user, ".");
+			strcat(rpc_user, default_user_name);
+		}
+		free(tmp);
 		free(rpc_pass);
 		rpc_pass = strdup(p + 1);
 		pool_set_creds(cur_pooln);
