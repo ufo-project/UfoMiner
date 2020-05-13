@@ -8,18 +8,18 @@ JANSSON_INCLUDES=
 endif
 
 EXTRA_DIST		= autogen.sh README.md README.txt LICENSE.txt \
-			  RavenMiner.sln RavenMiner.vcxproj RavenMiner.vcxproj.filters \
+			  UfoMiner.sln UfoMiner.vcxproj UfoMiner.vcxproj.filters \
 			  compat/gettimeofday.c compat/getopt/getopt_long.c
 
 SUBDIRS = compat
 
-bin_PROGRAMS = RavenMiner
+bin_PROGRAMS = UfoMiner
 
-RavenMiner_SOURCES	= elist.h miner.h compat.h \
+UfoMiner_SOURCES	= elist.h miner.h compat.h \
 			  compat/inttypes.h compat/stdbool.h compat/unistd.h \
 			  compat/sys/time.h compat/getopt/getopt.h \
 			  crc32.c \
-			  RavenMiner.cpp pools.cpp util.cpp bench.cpp bignum.cpp \
+			  UfoMiner.cpp pools.cpp util.cpp bench.cpp bignum.cpp \
 			  api.cpp hashlog.cpp nvml.cpp stats.cpp sysinfos.cpp cuda.cpp \
 			  nvsettings.cpp \
 			  sph/fugue.c uint256.h \
@@ -48,23 +48,23 @@ nvml_libs = -ldl
 endif
 
 if HAVE_WINDOWS
-RavenMiner_SOURCES += compat/winansi.c
+UfoMiner_SOURCES += compat/winansi.c
 endif
 
-RavenMiner_LDFLAGS  = $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
-RavenMiner_LDADD    = @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@ $(nvml_libs)
-RavenMiner_CPPFLAGS = @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(CPPFLAGS) $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) $(DEF_INCLUDES) $(nvml_defs)
+UfoMiner_LDFLAGS  = $(PTHREAD_FLAGS) @CUDA_LDFLAGS@
+UfoMiner_LDADD    = @LIBCURL@ @JANSSON_LIBS@ @PTHREAD_LIBS@ @WS2_LIBS@ @CUDA_LIBS@ @OPENMP_CFLAGS@ @LIBS@ $(nvml_libs)
+UfoMiner_CPPFLAGS = @LIBCURL_CPPFLAGS@ @OPENMP_CFLAGS@ $(CPPFLAGS) $(PTHREAD_FLAGS) -fno-strict-aliasing $(JANSSON_INCLUDES) $(DEF_INCLUDES) $(nvml_defs)
 
 if HAVE_OSX
-RavenMiner_CPPFLAGS += -I/usr/local/llvm/lib/clang/4.0.0/include
-RavenMiner_LDFLAGS += -L/usr/local/llvm/lib
-RavenMiner_LDADD += -lomp
+UfoMiner_CPPFLAGS += -I/usr/local/llvm/lib/clang/4.0.0/include
+UfoMiner_LDFLAGS += -L/usr/local/llvm/lib
+UfoMiner_LDADD += -lomp
 endif
 
-#RavenMiner_CPPFLAGS += -DUSE_LIBSODIUM
-#RavenMiner_LDFLAGS += -Lequi/lib
-#RavenMiner_LDADD += -lsodium
-RavenMiner_LDADD += -lcuda
+#UfoMiner_CPPFLAGS += -DUSE_LIBSODIUM
+#UfoMiner_LDFLAGS += -Lequi/lib
+#UfoMiner_LDADD += -lsodium
+UfoMiner_LDADD += -lcuda
 
 nvcc_ARCH :=
 #nvcc_ARCH += -gencode=arch=compute_61,code=\"sm_61,compute_61\"
