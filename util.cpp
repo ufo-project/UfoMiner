@@ -1210,6 +1210,8 @@ static const char *get_stratum_session_id(json_t *val)
 static bool stratum_parse_extranonce(struct stratum_ctx *sctx, json_t *params, int pndx)
 {
 	const char* xnonce1;
+	uint32_t xnonce1_len;
+	char c;
 
 	xnonce1 = json_string_value(json_array_get(params, pndx));
 	if (!xnonce1) {
@@ -1218,14 +1220,14 @@ static bool stratum_parse_extranonce(struct stratum_ctx *sctx, json_t *params, i
 	}
 
 	// check xnonce1
-	uint32_t xnonce1_len = strlen(xnonce1);
+	xnonce1_len = strlen(xnonce1);
 	if (xnonce1_len != 4 && xnonce1_len != 6 && xnonce1_len != 8) {
 		applog(LOG_ERR, "invalid enonce: %s", xnonce1);
 		goto out;
 	}
 
 	for (int i = 0; i < xnonce1_len; ++i) {
-		char c = xnonce1[i];
+		c = xnonce1[i];
 		if (c < '0' ||
 			(c > '9' && c < 'A') ||
 			(c > 'F' && c < 'a') ||
