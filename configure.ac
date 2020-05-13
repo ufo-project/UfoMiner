@@ -1,10 +1,10 @@
-AC_INIT([RavenMiner], [2.2.5-RVN], [], [RavenMiner], [http://github.com/MSFTserver/RavenMiner])
+AC_INIT([UfoMiner], [2.2.5-UFO], [], [UfoMiner], [http://github.com/ufo-project/UfoMiner])
 
 AC_PREREQ([2.59c])
 AC_CANONICAL_SYSTEM
-AC_CONFIG_SRCDIR([RavenMiner.cpp])
+AC_CONFIG_SRCDIR([UfoMiner.cpp])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
-AC_CONFIG_HEADERS([RavenMiner-config.h])
+AC_CONFIG_HEADERS([UfoMiner-config.h])
 
 dnl Make sure anyone changing configure.ac/Makefile.am has a clue
 AM_MAINTAINER_MODE
