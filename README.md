@@ -67,6 +67,7 @@ sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/machine-lea
 
 sudo apt update
 sudo apt install cuda-10-1
+sudo apt install nvidia-cuda-toolkit
 ```
 
 4. Add the following lines to your ~/.profile file for CUDA 10.1
