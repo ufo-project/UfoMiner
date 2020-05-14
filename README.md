@@ -62,17 +62,25 @@ make -j4
 
 3. Start to mine
 
-windows
+* windows
+
+
 ```UfoMiner.exe --url=stratum+tcp://mainnet-pool01.ufo.link:8080 --user=<your address>.<your name> --pass=<your pass>```
 
-linux
+* linux
+
+
 ```./UfoMiner --url=stratum+tcp://mainnet-pool01.ufo.link:8080 --user=<your address>.<your name> --pass=<your pass>```
 
 for example:
 
-windows
+* windows
+
+
 ```UfoMiner.exe --url=stratum+tcp://mainnet-pool01.ufo.link:8080 --user=1f4d22bab09fdfdc1f4247a48f58396a3f3b15f8150748c5ac1c6f2189536728ca6.worker01 --pass=123456```
 
-linux
+* linux
+
+
 ```./UfoMiner --url=stratum+tcp://mainnet-pool01.ufo.link:8080 --user=1f4d22bab09fdfdc1f4247a48f58396a3f3b15f8150748c5ac1c6f2189536728ca6.worker01 --pass=123456```
 
