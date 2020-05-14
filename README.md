@@ -34,6 +34,18 @@ sudo apt-get install libcurl4-openssl-dev
 
 2. Install latest Nvidia Driver
 
+
+```
+# Blacklist Nvidia nouveau driver
+
+sudo bash -c "echo blacklist nouveau > /etc/modprobe.d/blacklist-nvidia-nouveau.conf"
+sudo bash -c "echo options nouveau modeset=0 >> /etc/modprobe.d/blacklist-nvidia-nouveau.conf"
+
+sudo update-initramfs -u
+sudo reboot
+```
+
+
 ```
 sudo rm /etc/apt/sources.list.d/cuda*
 sudo apt remove --autoremove nvidia-cuda-toolkit
