@@ -87,8 +87,9 @@ fi
 
 ```
 git clone https://github.com/ufo-project/UfoMiner
-cd UfoMiner
+cd UfoMiner/compat
 git clone https://github.com/ufo-project/curl-for-windows
+cd ..
 ```
 
 8. build
