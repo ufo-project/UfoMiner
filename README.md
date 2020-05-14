@@ -34,9 +34,43 @@ sudo apt-get install libcurl4-openssl-dev
 
 2. Install latest Nvidia Driver
 
+```
+sudo rm /etc/apt/sources.list.d/cuda*
+sudo apt remove --autoremove nvidia-cuda-toolkit
+sudo apt remove --autoremove nvidia-*
+
+sudo apt update
+sudo add-apt-repository ppa:graphics-drivers/ppa
+sudo apt update
+sudo apt install nvidia-driver-440
+```
+
+
 3. Install CUDA for linux
 
-4. Fetch the ufominer project
+```
+sudo apt-key adv --fetch-keys  http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
+sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
+sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda_learn.list'
+
+sudo apt update
+sudo apt install cuda-10-1
+```
+
+4. Add the following lines to your ~/.profile file for CUDA 10.1
+```
+if [ -d "/usr/local/cuda-10.1/bin/" ]; then
+    export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
+    export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+fi
+```
+
+5. Check NVIDIA Cuda Compiler with `nvcc --version`
+
+6. Check NVIDIA driver with `nvidia-smi`
+
+
+7. Fetch the ufominer project
 
 ```
 git clone https://github.com/ufo-project/UfoMiner
@@ -45,7 +79,7 @@ git clone https://github.com/ufo-project/curl-for-windows
 cd ..
 ```
 
-5. build
+8. build
 
 ```
 sh autogen.sh
