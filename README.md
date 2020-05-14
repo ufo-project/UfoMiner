@@ -89,7 +89,6 @@ fi
 git clone https://github.com/ufo-project/UfoMiner
 cd UfoMiner
 git clone https://github.com/ufo-project/curl-for-windows
-cd ..
 ```
 
 8. build
